@@ -92,6 +92,20 @@ export async function POST(req: NextRequest) {
   console.log(`[Nytro-Webhook] Received POST, payload length: ${rawBody.length}`);
   console.log(`[Nytro-Webhook] Payload preview: ${rawBody.slice(0, 500)}`);
 
+  // FORWARD the webhook to Odoo so Odoo also creates the whatsapp.message
+  try {
+    const odooWebhookUrl = "https://www.nytro.com.br/whatsapp/webhook";
+    console.log(`[Nytro-Webhook] Forwarding to Odoo: ${odooWebhookUrl}`);
+    const odooRes = await fetch(odooWebhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: rawBody,
+    });
+    console.log(`[Nytro-Webhook] Odoo forward response: ${odooRes.status}`);
+  } catch (e) {
+    console.log(`[Nytro-Webhook] Odoo forward failed (non-blocking): ${e}`);
+  }
+
   // Always 200 OK quickly so Meta doesn't retry
   try {
     for (const entry of payload.entry || []) {
