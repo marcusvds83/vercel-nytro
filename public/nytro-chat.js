@@ -12,24 +12,7 @@
 
   const VERCEL_URL = 'https://vercel-nytro-git-main-nytro3.vercel.app';
   const API_ENDPOINT = VERCEL_URL + '/api/chat';
-  let LOGO_URL = 'https://luisfernandonytro-nytro.odoo.com/web/image/5759-5e1feadc/newlogo.png?height=256';
-  // Buscar configuração dinâmica (logo, brand) do /nytro-config.json
-  // Permite trocar a logo editando apenas o JSON, sem rebuild/deploy do JS
-  fetch('/nytro-config.json', { cache: 'no-store' })
-    .then(function(r) { return r.json(); })
-    .then(function(cfg) {
-      if (cfg.logoUrl) {
-        LOGO_URL = cfg.logoUrl;
-        // Atualizar imagens já renderizadas
-        document.querySelectorAll('.nytro-header img').forEach(function(img) {
-          img.src = LOGO_URL;
-        });
-      }
-    })
-    .catch(function(e) {
-      // Silencioso — usa o fallback definido acima
-      console.warn('[Nytro] Não foi possível carregar nytro-config.json, usando logo fallback');
-    });
+  const LOGO_URL = 'https://luisfernandonytro-nytro.odoo.com/web/image/5759-5e1feadc/newlogo.png?height=256';
   const PRIMARY_COLOR = '#0F766E';
   const ACCENT_COLOR = '#10B981';
   const WHATSAPP_GREEN = '#25D366';
