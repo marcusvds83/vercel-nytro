@@ -10,7 +10,7 @@
 
   const VERCEL_URL = 'https://vercel-nytro-git-main-nytro3.vercel.app';
   const API_ENDPOINT = VERCEL_URL + '/api/chat';
-  const LOGO_URL = 'https://luisfernandonytro-nytro.odoo.com/web/image/5759-5e1feadc/newlogo.png?height=256';
+  const LOGO_URL = window.NYTRO_LOGO_URL || 'https://luisfernandonytro-nytro.odoo.com/web/image/5759-5e1feadc/newlogo.png?height=256';
   const PRIMARY_COLOR = '#0F766E';
   const ACCENT_COLOR = '#10B981';
   const WHATSAPP_GREEN = '#25D366';
