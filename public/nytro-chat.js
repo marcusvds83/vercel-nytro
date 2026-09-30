@@ -7,6 +7,8 @@
   'use strict';
   if (window.__NYTRO_CHAT_LOADED__) return;
   window.__NYTRO_CHAT_LOADED__ = true;
+  // Cache buster
+  var _ts = Date.now();
 
   const VERCEL_URL = 'https://vercel-nytro-git-main-nytro3.vercel.app';
   const API_ENDPOINT = VERCEL_URL + '/api/chat';
