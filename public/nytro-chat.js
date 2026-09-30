@@ -316,8 +316,7 @@
   win.id = 'nytro-window';
   win.innerHTML = `
     <div class="nytro-header">
-      <img src="${LOGO_URL}" alt="Nytro" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
-      <div style="display:none;width:42px;height:42px;border-radius:50%;background:white;align-items:center;justify-content:center;font-weight:700;color:${PRIMARY_COLOR};font-size:18px;">N</div>
+      <img src="${LOGO_URL}" alt="Nytro" style="width:42px;height:42px;border-radius:50%;background:white;object-fit:contain;padding:2px;" />
       <div class="nytro-header-info">
         <div class="nytro-header-name">Assistente Nytro</div>
         <div class="nytro-header-status">Online agora</div>
