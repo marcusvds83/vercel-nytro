@@ -318,9 +318,7 @@
   win.id = 'nytro-window';
   win.innerHTML = `
     <div class="nytro-header">
-      <div style="width:42px;height:42px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">
-        <div style="width:38px;height:38px;border-radius:50%;background:#fff url('${LOGO_URL}') center/contain no-repeat;"></div>
-      </div>
+      <img src="https://luisfernandonytro-nytro.odoo.com/web/image/5759-5e1feadc/newlogo.png?height=256" alt="Nytro" style="width:42px;height:42px;border-radius:50%;background:#fff;object-fit:contain;padding:3px;flex-shrink:0;" onerror="this.onerror=null;this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2242%22 height=%2242%22><rect width=%2242%22 height=%2242%22 rx=%2221%22 fill=%22white%22/><text x=%2216%22 y=%2229%22 font-size=%2222%22 font-weight=%22bold%22 fill=%22%230F766E%22>N</text></svg>'" />
       <div class="nytro-header-info">
         <div class="nytro-header-name">Assistente Nytro</div>
         <div class="nytro-header-status">Online agora</div>
