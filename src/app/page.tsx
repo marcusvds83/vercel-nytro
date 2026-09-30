@@ -1,86 +1,37 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useRef } from "react";
-
-type Session = { ok: boolean; username?: string };
+import { useState, useRef } from "react";
 
 export default function Home() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loginForm, setLoginForm] = useState({ username: "", password: "" });
-  const [loginError, setLoginError] = useState<string | null>(null);
-  const [loginLoading, setLoginLoading] = useState(false);
-
   const [logoUrl, setLogoUrl] = useState<string>("/api/logo?ts=" + Date.now());
   const [uploading, setUploading] = useState(false);
-  const [uploadMsg, setUploadMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-
-  // Verifica sessão ao montar
-  useEffect(() => {
-    fetch("/api/admin/me")
-      .then((r) => r.json())
-      .then((data) => setSession(data))
-      .catch(() => setSession({ ok: false }));
-  }, []);
-
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setLoginLoading(true);
-    setLoginError(null);
-    try {
-      const res = await fetch("/api/admin/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(loginForm),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.ok) {
-        setLoginError(data.error || "Falha no login");
-      } else {
-        setSession({ ok: true, username: data.username });
-        setLoginForm({ username: "", password: "" });
-      }
-    } catch (err: any) {
-      setLoginError(err?.message || "Erro de rede");
-    } finally {
-      setLoginLoading(false);
-    }
-  }
-
-  async function handleLogout() {
-    await fetch("/api/admin/logout", { method: "POST" });
-    setSession({ ok: false });
-  }
 
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
     const file = fileRef.current?.files?.[0];
     if (!file) {
-      setUploadMsg({ type: "err", text: "Selecione um arquivo" });
+      setMsg({ type: "err", text: "Selecione um arquivo" });
       return;
     }
     setUploading(true);
-    setUploadMsg(null);
+    setMsg(null);
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok || !data.ok) {
-        setUploadMsg({ type: "err", text: data.error || "Falha no upload" });
+        setMsg({ type: "err", text: data.error || "Falha no upload" });
       } else {
-        setUploadMsg({
-          type: "ok",
-          text: `Logo atualizada com sucesso! (${data.size} bytes, ${data.contentType})`,
-        });
-        // Atualiza preview com cache buster
+        setMsg({ type: "ok", text: "Logo atualizada com sucesso!" });
         setLogoUrl("/api/logo?ts=" + Date.now());
-        // Limpa input
         if (fileRef.current) fileRef.current.value = "";
       }
     } catch (err: any) {
-      setUploadMsg({ type: "err", text: err?.message || "Erro de rede" });
+      setMsg({ type: "err", text: err?.message || "Erro de rede" });
     } finally {
       setUploading(false);
     }
@@ -98,7 +49,7 @@ export default function Home() {
         padding: "2rem",
       }}
     >
-      <div style={{ maxWidth: 640, width: "100%", textAlign: "center" }}>
+      <div style={{ maxWidth: 540, width: "100%", textAlign: "center" }}>
         <div
           style={{
             display: "inline-flex",
@@ -123,7 +74,7 @@ export default function Home() {
           Bot IA da Nytro para WhatsApp, integrado ao Odoo SaaS.
         </p>
 
-        {/* Card de status/info (original) */}
+        {/* Card de status (original) */}
         <div
           style={{
             marginTop: 32,
@@ -179,7 +130,6 @@ export default function Home() {
             🖼️ Logo do bot de atendimento
           </h2>
 
-          {/* Preview da logo atual */}
           <div
             style={{
               display: "flex",
@@ -205,122 +155,61 @@ export default function Home() {
               }}
             />
             <div style={{ fontSize: 13, lineHeight: 1.4 }}>
-              <div style={{ fontWeight: 600, color: "#0F766E" }}>
-                Logo atual do chat
-              </div>
+              <div style={{ fontWeight: 600 }}>Logo atual do chat</div>
               <div style={{ color: "#666", fontSize: 11 }}>
-                Servida via <code>/api/logo</code> — se nenhum upload foi feito,
-                usa fallback do Odoo.
+                Se nenhum upload foi feito, usa fallback do Odoo.
               </div>
             </div>
           </div>
 
-          {/* Se não está logado, mostra form de login */}
-          {session === null ? (
-            <div style={{ fontSize: 13, opacity: 0.7, textAlign: "center", padding: 8 }}>
-              Carregando…
+          <form onSubmit={handleUpload} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/svg+xml"
+              style={{
+                fontSize: 12,
+                padding: 8,
+                background: "rgba(255,255,255,0.95)",
+                color: "#0F766E",
+                border: "none",
+                borderRadius: 6,
+              }}
+            />
+            <div style={{ fontSize: 11, opacity: 0.7 }}>
+              Aceita PNG, JPG, WEBP ou SVG. Máx 2 MB. Substitui imediatamente.
             </div>
-          ) : !session.ok ? (
-            <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ fontSize: 13, opacity: 0.85, marginBottom: 4 }}>
-                🔐 Faça login com suas credenciais Odoo para trocar a logo:
-              </div>
-              <input
-                type="text"
-                placeholder="Usuário Odoo (ex: luis.justus@nytro.com.br)"
-                value={loginForm.username}
-                onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
-                style={inputStyle}
-                autoComplete="username"
-                required
-              />
-              <input
-                type="password"
-                placeholder="Senha Odoo"
-                value={loginForm.password}
-                onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                style={inputStyle}
-                autoComplete="current-password"
-                required
-              />
-              {loginError && (
-                <div style={{ color: "#fecaca", fontSize: 12 }}>⚠️ {loginError}</div>
-              )}
-              <button
-                type="submit"
-                disabled={loginLoading}
-                style={btnPrimary}
-              >
-                {loginLoading ? "Entrando…" : "Entrar"}
-              </button>
-            </form>
-          ) : (
-            // Logado: mostra form de upload
-            <div>
+            {msg && (
               <div
                 style={{
-                  fontSize: 13,
-                  marginBottom: 12,
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                  gap: 8,
+                  fontSize: 12,
+                  padding: 8,
+                  borderRadius: 6,
+                  background: msg.type === "ok" ? "rgba(16,185,129,0.25)" : "rgba(239,68,68,0.25)",
+                  color: msg.type === "ok" ? "#d1fae5" : "#fecaca",
                 }}
               >
-                <span>
-                  👋 Logado como <strong>{session.username}</strong>
-                </span>
-                <button onClick={handleLogout} style={btnLink}>
-                  Sair
-                </button>
+                {msg.type === "ok" ? "✅ " : "⚠️ "}
+                {msg.text}
               </div>
-
-              <form onSubmit={handleUpload} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                  style={{
-                    fontSize: 12,
-                    padding: 8,
-                    background: "rgba(255,255,255,0.95)",
-                    color: "#0F766E",
-                    border: "none",
-                    borderRadius: 6,
-                  }}
-                />
-                <div style={{ fontSize: 11, opacity: 0.7 }}>
-                  Aceita PNG, JPG, WEBP ou SVG. Máx 2 MB. A imagem substitui
-                  imediatamente a logo do chat.
-                </div>
-                {uploadMsg && (
-                  <div
-                    style={{
-                      fontSize: 12,
-                      padding: 8,
-                      borderRadius: 6,
-                      background:
-                        uploadMsg.type === "ok"
-                          ? "rgba(16,185,129,0.25)"
-                          : "rgba(239,68,68,0.25)",
-                      color: uploadMsg.type === "ok" ? "#d1fae5" : "#fecaca",
-                    }}
-                  >
-                    {uploadMsg.type === "ok" ? "✅ " : "⚠️ "}
-                    {uploadMsg.text}
-                  </div>
-                )}
-                <button
-                  type="submit"
-                  disabled={uploading}
-                  style={btnPrimary}
-                >
-                  {uploading ? "Enviando…" : "📤 Enviar nova logo"}
-                </button>
-              </form>
-            </div>
-          )}
+            )}
+            <button
+              type="submit"
+              disabled={uploading}
+              style={{
+                padding: "10px 16px",
+                border: "none",
+                borderRadius: 6,
+                fontSize: 14,
+                fontWeight: 600,
+                background: "white",
+                color: "#0F766E",
+                cursor: uploading ? "wait" : "pointer",
+              }}
+            >
+              {uploading ? "Enviando…" : "📤 Enviar nova logo"}
+            </button>
+          </form>
         </div>
 
         <p style={{ marginTop: 24, fontSize: 12, opacity: 0.7 }}>
@@ -331,34 +220,3 @@ export default function Home() {
     </main>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  padding: "10px 12px",
-  border: "none",
-  borderRadius: 6,
-  fontSize: 14,
-  background: "rgba(255,255,255,0.95)",
-  color: "#0F766E",
-  outline: "none",
-};
-
-const btnPrimary: React.CSSProperties = {
-  padding: "10px 16px",
-  border: "none",
-  borderRadius: 6,
-  fontSize: 14,
-  fontWeight: 600,
-  background: "white",
-  color: "#0F766E",
-  cursor: "pointer",
-};
-
-const btnLink: React.CSSProperties = {
-  background: "transparent",
-  border: "none",
-  color: "white",
-  textDecoration: "underline",
-  fontSize: 12,
-  cursor: "pointer",
-  padding: 0,
-};
