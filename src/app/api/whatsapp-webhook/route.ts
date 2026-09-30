@@ -210,10 +210,15 @@ async function handleInbound(input: {
     return;
   }
 
-  // 5) Check for handoff request
+  // 5) Check for handoff request — use word boundaries to avoid false positives
   const handoffWordsStr = process.env.NYTRO_HANDOFF_WORDS || "humano,atendente,operador,falar com pessoa";
   const handoffWords = handoffWordsStr.split(",").map((w) => w.trim().toLowerCase()).filter(Boolean);
-  const wantsHuman = handoffWords.some((w) => text.toLowerCase().includes(w));
+  const textLower = text.toLowerCase();
+  // Match whole words only (surrounded by spaces, punctuation, or start/end)
+  const wantsHuman = handoffWords.some((w) => {
+    const regex = new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+    return regex.test(textLower);
+  });
 
   if (wantsHuman) {
     console.log("[Nytro] Handoff requested — notifying operators");
