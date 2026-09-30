@@ -327,7 +327,7 @@ function buildSystemPrompt(userQuery: string): string {
   return SYSTEM_PROMPT.replace("{KNOWLEDGE_CONTEXT}", ctx || "(Base de conhecimento vazia.)");
 }
 
-function extractLeadInfo(transcript: string): {
+function extractLeadInfo(transcript: string, contactName?: string): {
   name?: string;
   email?: string;
   phone?: string;
@@ -339,6 +339,10 @@ function extractLeadInfo(transcript: string): {
     /(?:meu nome é|me chamo|sou o|sou a|nome[:\s]+)\s+([A-Za-zÀ-ú][A-Za-zÀ-ú\s]{2,40})/i
   );
   if (m) name = m[1].trim().split(/\s+/).slice(0, 4).join(" ");
+  // If name not found in text, use contactName from Meta webhook
+  if (!name && contactName) {
+    name = contactName;
+  }
   return {
     name,
     email: emailMatch?.[0],
@@ -411,7 +415,7 @@ export async function replyWhatsApp(opts: {
   // Check if we should create a lead in Odoo
   let leadCreated: number | undefined;
   const transcript = messages.map((m) => m.content).join("\n") + "\n" + userQuery;
-  const leadInfo = extractLeadInfo(transcript);
+  const leadInfo = extractLeadInfo(transcript, contactName);
   if (leadInfo.name && (leadInfo.email || leadInfo.phone)) {
     const hasIntent = /(orçamento|preço|proposta|implementar|odoo|erp|sistema|contratar|demo|teste|agendar|nytro|consultor|especialista)/i.test(
       transcript

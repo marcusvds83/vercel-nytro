@@ -172,17 +172,45 @@ async function handleInbound(input: {
   }
   console.log(`[Nytro] Author: id=${authorInfo.authorId} name=${authorInfo.authorName}`);
 
-  // 3) Check operator online status
+  // 3) Check operator online status — but DON'T skip if online
+  // The bot should ALWAYS respond unless a human has manually replied
   const operatorIdsStr = process.env.NYTRO_OPERATOR_USER_IDS || "2,6";
   const operatorIds = operatorIdsStr
     .split(",")
     .map((x) => parseInt(x.trim(), 10))
     .filter((x) => !isNaN(x));
 
-  const opStatus = await getOnlineOperatorCount(operatorIds);
-  console.log(`[Nytro] Operators online: ${opStatus.online}/${opStatus.total}`);
+  // 4) Check if a HUMAN has already replied in this conversation
+  // If yes, the bot stops (human took over)
+  // System partner IDs = bot/operators (3=Admin, 22=Luis, 23=Comercial, 68865=AI Agent)
+  const systemPartnerIds = [3, 22, 23, 68865];
+  let humanReplied = false;
+  if (authorInfo.channelId) {
+    const historyRows = await getConversationHistory(
+      authorInfo.channelId,
+      authorInfo.authorId,
+      [], // no operator partner IDs for now
+      0,
+      10
+    );
+    // Check if the LAST message before the current one was from a human operator
+    // (not the bot). If so, the human is actively handling the conversation.
+    const recentMessages = historyRows.slice(-5);
+    for (let i = recentMessages.length - 1; i >= 0; i--) {
+      const row = recentMessages[i];
+      // If the last non-customer message was from a human (not bot), stop
+      if (row.role === "Operador") {
+        humanReplied = true;
+        break;
+      }
+    }
+  }
+  if (humanReplied) {
+    console.log(`[Nytro] Human operator has replied — bot stepping back`);
+    return;
+  }
 
-  // 4) Check for handoff request
+  // 5) Check for handoff request
   const handoffWordsStr = process.env.NYTRO_HANDOFF_WORDS || "humano,atendente,operador,falar com pessoa";
   const handoffWords = handoffWordsStr.split(",").map((w) => w.trim().toLowerCase()).filter(Boolean);
   const wantsHuman = handoffWords.some((w) => text.toLowerCase().includes(w));
@@ -200,11 +228,8 @@ async function handleInbound(input: {
     return;
   }
 
-  // 5) If operator online, skip (let human handle)
-  if (opStatus.online > 0) {
-    console.log(`[Nytro] ${opStatus.online} operator(s) online — skipping bot reply`);
-    return;
-  }
+  // 5) Bot ALWAYS responds (unless human already replied — checked above)
+  // Operators being online does NOT stop the bot anymore
 
   // 6) Build conversation history
   let channelId = authorInfo.channelId;
@@ -324,13 +349,12 @@ async function handleInboundFallback(input: {
   // 3) Get WA account ID (account 1 — Nytro)
   const waAccountId = 1;
 
-  // 4) Check operator online
+  // 4) Check operator online — bot ALWAYS responds now
   const operatorIdsStr = process.env.NYTRO_OPERATOR_USER_IDS || "2,6";
   const operatorIds = operatorIdsStr
     .split(",")
     .map((x) => parseInt(x.trim(), 10))
     .filter((x) => !isNaN(x));
-  const opStatus = await getOnlineOperatorCount(operatorIds);
 
   // 5) Check handoff
   const handoffWordsStr = process.env.NYTRO_HANDOFF_WORDS || "humano,atendente,operador,falar com pessoa";
@@ -346,10 +370,7 @@ async function handleInboundFallback(input: {
     return;
   }
 
-  if (opStatus.online > 0) {
-    console.log(`[Nytro-Fallback] ${opStatus.online} operator(s) online — skipping`);
-    return;
-  }
+  // Bot ALWAYS responds (no more operator-online check)
 
   // 6) Build history (just the user message — no Odoo history available)
   const history: ChatMessage[] = [
