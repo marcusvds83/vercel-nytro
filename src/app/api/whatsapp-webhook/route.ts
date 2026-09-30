@@ -92,18 +92,17 @@ export async function POST(req: NextRequest) {
   console.log(`[Nytro-Webhook] Received POST, payload length: ${rawBody.length}`);
   console.log(`[Nytro-Webhook] Payload preview: ${rawBody.slice(0, 500)}`);
 
-  // FORWARD the webhook to Odoo so Odoo also creates the whatsapp.message
+  // FORWARD the webhook to Odoo (fire-and-forget, non-blocking)
   try {
     const odooWebhookUrl = "https://www.nytro.com.br/whatsapp/webhook";
-    console.log(`[Nytro-Webhook] Forwarding to Odoo: ${odooWebhookUrl}`);
-    const odooRes = await fetch(odooWebhookUrl, {
+    console.log(`[Nytro-Webhook] Forwarding to Odoo (fire-and-forget)`);
+    fetch(odooWebhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: rawBody,
-    });
-    console.log(`[Nytro-Webhook] Odoo forward response: ${odooRes.status}`);
+    }).catch(() => {});
   } catch (e) {
-    console.log(`[Nytro-Webhook] Odoo forward failed (non-blocking): ${e}`);
+    // ignore
   }
 
   // Always 200 OK quickly so Meta doesn't retry
@@ -146,12 +145,11 @@ async function handleInbound(input: {
   const { phone, contactName, text } = input;
   console.log(`[Nytro] Inbound WA from ${phone} (${contactName || "?"}): ${text.slice(0, 80)}`);
 
-  // 1) Get the whatsapp.message that Odoo already created (it processes Meta webhook first)
-  // Retry up to 5 times with 2s interval = 10s total max wait
+  // 1) Get the whatsapp.message that Odoo already created
+  // Retry up to 3 times with 2s interval = 6s total max wait
   let waMsg = null;
-  for (let attempt = 1; attempt <= 5; attempt++) {
-    console.log(`[Nytro-Debug] Attempt ${attempt}/5: searching WA msg in Odoo...`);
-    // Wait 2 seconds before each attempt (Odoo takes a moment to process Meta webhook)
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    console.log(`[Nytro-Debug] Attempt ${attempt}/3: searching WA msg in Odoo...`);
     await sleep(2000);
     waMsg = await getRecentWaMessage(phone);
     if (waMsg) {
@@ -161,10 +159,7 @@ async function handleInbound(input: {
     console.log(`[Nytro-Debug] Attempt ${attempt}: not found yet, retrying...`);
   }
   if (!waMsg) {
-    console.log("[Nytro] No matching whatsapp.message found in Odoo after 5 retries");
-    // Fallback: continue without Odoo message, using just the Meta payload
-    // We need at least the partnerId and waAccountId to send a reply
-    console.log("[Nytro] Continuing with fallback (using Meta payload only)");
+    console.log("[Nytro] No matching whatsapp.message found after 3 retries — using fallback");
     await handleInboundFallback({ phone, contactName, text });
     return;
   }
