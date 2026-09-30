@@ -318,7 +318,7 @@
   win.id = 'nytro-window';
   win.innerHTML = `
     <div class="nytro-header">
-      <img src="/nytro-logo.png" alt="Nytro" style="width:42px;height:42px;flex-shrink:0;" />
+      <img src="https://luisfernandonytro-nytro.odoo.com/web/image/5759-5e1feadc/newlogo.png?height=256" alt="Nytro" style="width:42px;height:42px;flex-shrink:0;" />
       <div class="nytro-header-info">
         <div class="nytro-header-name">Assistente Nytro</div>
         <div class="nytro-header-status">Online agora</div>
