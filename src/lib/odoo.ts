@@ -326,6 +326,72 @@ export async function createCrmLead(opts: {
   }]);
 }
 
+/**
+ * Search for existing lead/opportunity by phone number.
+ * Returns the lead record if found, null otherwise.
+ */
+export async function findLeadByPhone(phoneDigits: string): Promise<{
+  id: number;
+  name: string;
+  type: string;
+  phone?: string;
+  description?: string;
+} | null> {
+  const digits = String(phoneDigits || "").replace(/\D/g, "").slice(-8);
+  if (!digits) return null;
+  try {
+    const leads = await searchRead<any>(
+      "crm.lead",
+      [["phone", "ilike", digits]],
+      ["id", "name", "type", "phone", "description", "partner_id"],
+      1,
+      "create_date desc"
+    );
+    if (leads && leads.length > 0) {
+      return leads[0];
+    }
+    // Also search by partner's phone
+    const partners = await searchRead<any>(
+      "res.partner",
+      [["phone", "ilike", digits]],
+      ["id"],
+      1,
+      "id desc"
+    );
+    if (partners && partners.length > 0) {
+      const partnerId = partners[0].id;
+      const partnerLeads = await searchRead<any>(
+        "crm.lead",
+        [["partner_id", "=", partnerId]],
+        ["id", "name", "type", "phone", "description", "partner_id"],
+        1,
+        "create_date desc"
+      );
+      if (partnerLeads && partnerLeads.length > 0) {
+        return partnerLeads[0];
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Update an existing lead's description (observations) with new conversation transcript.
+ */
+export async function updateLeadDescription(
+  leadId: number,
+  description: string
+): Promise<boolean> {
+  try {
+    await executeKw("crm.lead", "write", [leadId, { description }]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function notifyPartnerChatter(
   partnerId: number,
   message: string

@@ -318,7 +318,7 @@
   win.id = 'nytro-window';
   win.innerHTML = `
     <div class="nytro-header">
-      <div style="width:42px;height:42px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="28" height="28" viewBox="0 0 100 100"><rect width="100" height="100" rx="50" fill="white"/><text x="50" y="68" font-size="56" font-weight="900" fill="#0F766E" text-anchor="middle" font-family="Arial,sans-serif">N</text></svg></div>
+      <img src="https://vercel-nytro-git-main-nytro3.vercel.app/nytro-logo.png" alt="Nytro" style="width:42px;height:42px;border-radius:50%;background:#fff;object-fit:contain;padding:3px;flex-shrink:0;" />
       <div class="nytro-header-info">
         <div class="nytro-header-name">Assistente Nytro</div>
         <div class="nytro-header-status">Online agora</div>

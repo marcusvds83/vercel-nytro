@@ -11,7 +11,7 @@ import path from "path";
 import os from "os";
 import ZAI from "z-ai-web-dev-sdk";
 import { contextForQuery } from "@/lib/knowledge";
-import { createCrmLead } from "@/lib/odoo";
+import { createCrmLead, findLeadByPhone, updateLeadDescription } from "@/lib/odoo";
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -412,7 +412,7 @@ export async function replyWhatsApp(opts: {
 
   console.log(`[Nytro] Reply generated via ${provider} (len=${content.length})`);
 
-  // Check if we should create a lead in Odoo
+  // Check if we should create/update a lead in Odoo
   let leadCreated: number | undefined;
   const transcript = messages.map((m) => m.content).join("\n") + "\n" + userQuery;
   const leadInfo = extractLeadInfo(transcript, contactName);
@@ -422,16 +422,30 @@ export async function replyWhatsApp(opts: {
     );
     if (hasIntent) {
       try {
-        leadCreated = await createCrmLead({
-          name: `Lead WhatsApp — ${leadInfo.name}`,
-          partnerName: leadInfo.name,
-          email: leadInfo.email,
-          phone: leadInfo.phone,
-          description: `Lead gerado pelo bot IA da Nytro via WhatsApp (Vercel + Gemini).\n\nTranscrição:\n${transcript.slice(0, 1500)}`,
-        });
-        console.log(`[Nytro] Lead created in CRM: id=${leadCreated}`);
+        // First: search for existing lead by phone
+        const searchPhone = leadInfo.phone || "";
+        const existingLead = await findLeadByPhone(searchPhone);
+        
+        if (existingLead) {
+          // UPDATE existing lead with new conversation transcript
+          const oldDesc = existingLead.description || "";
+          const newDesc = `${oldDesc}\n\n--- Nova conversa (${new Date().toISOString()}) ---\n${transcript.slice(0, 2000)}`;
+          await updateLeadDescription(existingLead.id, newDesc);
+          leadCreated = existingLead.id;
+          console.log(`[Nytro] Updated existing lead ${existingLead.id} with new conversation`);
+        } else {
+          // CREATE new lead
+          leadCreated = await createCrmLead({
+            name: `Lead WhatsApp — ${leadInfo.name}`,
+            partnerName: leadInfo.name,
+            email: leadInfo.email,
+            phone: leadInfo.phone,
+            description: `Lead gerado pelo bot IA da Nytro via WhatsApp (Vercel + Gemini).\n\nTranscrição:\n${transcript.slice(0, 1500)}`,
+          });
+          console.log(`[Nytro] Lead created in CRM: id=${leadCreated}`);
+        }
       } catch (e) {
-        console.error("[Nytro] createCrmLead failed:", e);
+        console.error("[Nytro] Lead operation failed:", e);
       }
     }
   }
